@@ -1,6 +1,7 @@
 package com.example.nande.sunshine;
 
 
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
@@ -21,6 +23,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import java.text.SimpleDateFormat;
 import android.text.format.Time;
+import android.widget.Toast;
 
 
 import java.io.BufferedReader;
@@ -31,6 +34,7 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 
@@ -39,7 +43,7 @@ import java.util.List;
  */
 public class ForecastFragment extends Fragment {
 ListView listView;
-
+ArrayAdapter<String> mAdapter;
     public ForecastFragment() {
         // Required empty public constructor
     }
@@ -63,11 +67,23 @@ ListView listView;
         forecast_list.add("temp is 84");
         forecast_list.add("temp is 95");
         forecast_list.add("temp is 53");
-        ArrayAdapter<String> adapter=
-                new ArrayAdapter<String>(getContext(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,forecast_list);
-        // Inflate the layout for this fragment
-        listView.setAdapter(adapter);
 
+        mAdapter= new ArrayAdapter<String>(getContext(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,forecast_list);
+        // Inflate the layout for this fragment
+        listView.setAdapter(mAdapter);
+
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                String forecast_data=mAdapter.getItem(position);
+
+                Intent detail_intent=new Intent(getActivity(),DetailActivity.class);
+                detail_intent.putExtra("forecast_data",forecast_data);
+                startActivity(detail_intent);
+
+               // Toast.makeText(getContext(),mAdapter.getItem(position),Toast.LENGTH_LONG).show();
+            }
+        });
 
 
 
@@ -195,15 +211,36 @@ ListView listView;
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
             }
 
-            for (String s : resultStrs) {
+            /*for (String s : resultStrs) {
                 Log.v(Log_tag, "Forecast entry: " + s);
-            }
+            }*/
             return resultStrs;
         }
 
+        @Override
+        protected void onPostExecute(String[] strings) {
+            if(strings!=null) {
+                mAdapter.clear();
+
+                /*List<String> forecast_list = new ArrayList<String>();
+                forecast_list = (Arrays.asList(strings));*/
+
+                for(String str:strings){
+                    mAdapter.add(str);
+                }
 
 
-            @Override
+
+         /*   mAdapter= new ArrayAdapter<String>
+                    (getContext(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,forecast_list);
+            listView.setAdapter(mAdapter);*/
+
+            }
+
+
+        }
+
+        @Override
         protected String[] doInBackground(String... params) {
 
             if(params.length==0){
@@ -240,7 +277,7 @@ ListView listView;
                         .appendQueryParameter(DAYS_PARAM,Integer.toString(numDays))
                         .appendQueryParameter(APPID_PARAM,BuildConfig.OPEN_WEATHER_MAP_API_KEY).build();
                 URL url=new URL(builturi.toString());
-                Log.d("url",builturi.toString());
+              //  Log.d("url",builturi.toString());
                 urlConnection=(HttpURLConnection)url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
@@ -263,7 +300,7 @@ ListView listView;
                 }
                 forecastjsonStr=buffer.toString();
 
-                Log.v(Log_tag,"Data in Json from internet is: "+forecastjsonStr);
+               // Log.v(Log_tag,"Data in Json from internet is: "+forecastjsonStr);
 
 
             }catch (Exception e){
@@ -283,9 +320,8 @@ ListView listView;
 
 
                 try{
-                    String[] debug=getWeatherDataFromJson(forecastjsonStr,numDays);
-                    Log.d("format",debug[0]);
-                    return debug;
+
+                    return getWeatherDataFromJson(forecastjsonStr,numDays);
                 }catch (JSONException e){
                     Log.e(Log_tag,e.getMessage(),e);
                 }
