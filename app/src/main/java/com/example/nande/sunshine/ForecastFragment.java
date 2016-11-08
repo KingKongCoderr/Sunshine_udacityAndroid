@@ -2,9 +2,11 @@ package com.example.nande.sunshine;
 
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
@@ -57,18 +59,29 @@ ArrayAdapter<String> mAdapter;
     }
 
     @Override
+    public void onStart() {
+        super.onStart();
+        click_triggered();
+    }
+
+    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view= inflater.inflate(R.layout.fragment_main, container, false);
+
         listView=(ListView) view.findViewById(R.id.listview_forecast);
         List<String> forecast_list =new ArrayList<String>();
-        forecast_list.add("temp is 75");
+
+       /* forecast_list.add("temp is 75");
         forecast_list.add("temp is 67");
         forecast_list.add("temp is 84");
         forecast_list.add("temp is 95");
-        forecast_list.add("temp is 53");
+        forecast_list.add("temp is 53");*/
 
-        mAdapter= new ArrayAdapter<String>(getContext(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,forecast_list);
+
+
+        mAdapter= new ArrayAdapter<String>
+                (getContext(),R.layout.list_item_forecast,R.id.list_item_forecast_textview,forecast_list);
         // Inflate the layout for this fragment
         listView.setAdapter(mAdapter);
 
@@ -106,12 +119,20 @@ ArrayAdapter<String> mAdapter;
           click_triggered();
             return true;
         }
+        else if(id==R.id.settings){
+            Intent setting_intent=new Intent(getActivity(),SettingsActivity.class);
+            startActivity(setting_intent);
+        }
         return super.onOptionsItemSelected(item);
     }
 
-    public void click_triggered(){
+    private void click_triggered(){
         FetchWeatherTask backgroundtask=new FetchWeatherTask();
-        backgroundtask.execute("64468");
+        SharedPreferences prefs= PreferenceManager.getDefaultSharedPreferences(getActivity());
+        String location_zip=
+                prefs.getString(getString(R.string.pref_location_key),getString(R.string.pref_location_default));
+       // Log.d("debug","This is the Zip:"+location_zip);
+        backgroundtask.execute(location_zip);
     }
 
     public class FetchWeatherTask extends AsyncTask<String,Void,String[]>{
@@ -132,11 +153,16 @@ ArrayAdapter<String> mAdapter;
         /**
          * Prepare the weather high/lows for presentation.
          */
-        private String formatHighLows(double high, double low) {
+        private String formatHighLows(double high, double low,String unitType) {
             // For presentation, assume the user doesn't care about tenths of a degree.
+
+            if(unitType.equals(getString(R.string.pref_units_imperial))){
+             high=(high*1.8)+32;
+                low=(low*1.8)+32;
+            }
+
             long roundedHigh = Math.round(high);
             long roundedLow = Math.round(low);
-
             String highLowStr = roundedHigh + "/" + roundedLow;
             return highLowStr;
         }
@@ -179,6 +205,8 @@ ArrayAdapter<String> mAdapter;
             // now we work exclusively in UTC
             dayTime = new Time();
 
+            String unitType= PreferenceManager.getDefaultSharedPreferences(getActivity())
+                    .getString(getString(R.string.pref_tempunits_key),getString(R.string.pref_units_metric));
             String[] resultStrs = new String[numDays];
             for (int i = 0; i < weatherArray.length(); i++) {
                 // For now, using the format "Day, description, hi/low"
@@ -207,7 +235,7 @@ ArrayAdapter<String> mAdapter;
                 double high = temperatureObject.getDouble(OWM_MAX);
                 double low = temperatureObject.getDouble(OWM_MIN);
 
-                highAndLow = formatHighLows(high, low);
+                highAndLow = formatHighLows(high, low,unitType);
                 resultStrs[i] = day + " - " + description + " - " + highAndLow;
             }
 
@@ -271,7 +299,7 @@ ArrayAdapter<String> mAdapter;
                 final String APPID_PARAM="APPID";
 
                 Uri builturi= Uri.parse(FORECAST_BASE_URL).buildUpon()
-                        .appendQueryParameter(QUERY_PARAM,params[0])
+                        .appendQueryParameter(QUERY_PARAM,params[0]+",us")
                         .appendQueryParameter(FORMAT_PARAM,format)
                         .appendQueryParameter(UNITS_PARAM,units)
                         .appendQueryParameter(DAYS_PARAM,Integer.toString(numDays))

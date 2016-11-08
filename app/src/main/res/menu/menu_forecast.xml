@@ -6,6 +6,9 @@
           android:title="Refresh"
           app:showAsAction="ifRoom"
           />
+    <item android:id="@+id/settings"
+        android:title="@string/action_settings"
+        />
 
 
 
